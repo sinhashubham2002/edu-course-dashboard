@@ -77,6 +77,10 @@ export default {
 				'progress-complete': 'hsl(var(--progress-complete))',
 				'progress-incomplete': 'hsl(var(--progress-incomplete))'
 			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-background': 'var(--gradient-background)'
+			},
 			boxShadow: {
 				'elegant': 'var(--shadow-elegant)',
 				'card': 'var(--shadow-card)'

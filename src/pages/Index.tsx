@@ -8,7 +8,13 @@ import {
   Book, 
   Search,
   ArrowUpDown,
-  X
+  X,
+  Copy,
+  LogIn,
+  UserPlus,
+  Mail,
+  Lock,
+  User
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useToast } from '@/hooks/use-toast';
 
 // Course interface
 interface Course {
@@ -38,6 +45,13 @@ interface Course {
   requestCount: number;
   status: 'active' | 'progress' | 'inactive';
   id: string;
+}
+
+// User interface
+interface User {
+  id: string;
+  name: string;
+  email: string;
 }
 
 // Mock data
@@ -67,6 +81,13 @@ const CourseCatalog = () => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [userRequests, setUserRequests] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareModalCourse, setShareModalCourse] = useState<Course | null>(null);
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+
+  const { toast } = useToast();
   
   // Column filters for expanded view
   const [departmentFilter, setDepartmentFilter] = useState<{[college: string]: string}>({});
@@ -74,12 +95,18 @@ const CourseCatalog = () => {
   const [courseNameFilter, setCourseNameFilter] = useState<{[college: string]: string}>({});
   const [activeFilterColumn, setActiveFilterColumn] = useState<{college: string, column: string} | null>(null);
 
-  // Modal form state
+  // Modal form states
   const [modalForm, setModalForm] = useState({
     college: '',
     semester: '',
     courseName: '',
     department: ''
+  });
+
+  const [authForm, setAuthForm] = useState({
+    name: '',
+    email: '',
+    password: ''
   });
 
   // Get unique colleges and their data
@@ -129,27 +156,96 @@ const CourseCatalog = () => {
   };
 
   const handleRequest = (courseId: string) => {
+    if (!currentUser) {
+      setIsAuthModalOpen(true);
+      return;
+    }
+
     setCourses(prev => prev.map(course => 
       course.id === courseId 
         ? { ...course, requestCount: course.requestCount + 1 }
         : course
     ));
     setUserRequests(prev => new Set([...prev, courseId]));
+    toast({
+      title: "Course requested!",
+      description: "Your request has been added successfully.",
+    });
   };
 
   const handleUnrequest = (courseId: string) => {
-    if (userRequests.has(courseId)) {
-      setCourses(prev => prev.map(course => 
-        course.id === courseId 
-          ? { ...course, requestCount: Math.max(0, course.requestCount - 1) }
-          : course
-      ));
-      setUserRequests(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(courseId);
-        return newSet;
+    if (!currentUser || !userRequests.has(courseId)) return;
+
+    setCourses(prev => prev.map(course => 
+      course.id === courseId 
+        ? { ...course, requestCount: Math.max(0, course.requestCount - 1) }
+        : course
+    ));
+    setUserRequests(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(courseId);
+      return newSet;
+    });
+    toast({
+      title: "Request removed",
+      description: "Your course request has been removed.",
+    });
+  };
+
+  const handleShare = (course: Course) => {
+    setShareModalCourse(course);
+    setIsShareModalOpen(true);
+  };
+
+  const copyToClipboard = () => {
+    const currentUrl = window.location.href;
+    navigator.clipboard.writeText(currentUrl).then(() => {
+      toast({
+        title: "Link copied!",
+        description: "Course page link has been copied to clipboard.",
+      });
+    });
+  };
+
+  const handleNativeShare = () => {
+    if (navigator.share && shareModalCourse) {
+      navigator.share({
+        title: `Request ${shareModalCourse.course}`,
+        text: `Help me request ${shareModalCourse.course} at ${shareModalCourse.college}. We need 25 requests to make this course happen!`,
+        url: window.location.href
+      }).catch(console.error);
+    }
+  };
+
+  const handleAuth = () => {
+    if (authMode === 'signin') {
+      // Mock signin
+      const mockUser = { id: '1', name: 'John Doe', email: authForm.email };
+      setCurrentUser(mockUser);
+      toast({
+        title: "Welcome back!",
+        description: "You have successfully signed in.",
+      });
+    } else {
+      // Mock signup
+      const mockUser = { id: '1', name: authForm.name, email: authForm.email };
+      setCurrentUser(mockUser);
+      toast({
+        title: "Account created!",
+        description: "Welcome to Course Catalog!",
       });
     }
+    setIsAuthModalOpen(false);
+    setAuthForm({ name: '', email: '', password: '' });
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    setUserRequests(new Set());
+    toast({
+      title: "Logged out",
+      description: "You have been logged out successfully.",
+    });
   };
 
   const getFilteredCourses = (collegeCourses: Course[], collegeName: string) => {
@@ -176,10 +272,13 @@ const CourseCatalog = () => {
   };
 
   const handleModalSubmit = () => {
-    // In a real app, this would submit to a backend
     console.log('Course request submitted:', modalForm);
     setIsModalOpen(false);
     setModalForm({ college: '', semester: '', courseName: '', department: '' });
+    toast({
+      title: "Course request submitted!",
+      description: "We'll review your request and get back to you soon.",
+    });
   };
 
   const handleFilterClick = (college: string, column: string) => {
@@ -248,107 +347,130 @@ const CourseCatalog = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <div className="max-w-7xl mx-auto p-6">
+    <div className="min-h-screen bg-gradient-background">
+      <div className="max-w-7xl mx-auto p-4 lg:p-6">
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <h1 className="text-4xl font-bold text-foreground">Course Catalog</h1>
-          <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogTrigger asChild>
-              <Button className="bg-primary hover:bg-primary/90 text-primary-foreground font-medium px-6 py-3 rounded-lg shadow-elegant">
-                <Plus className="h-5 w-5 mr-2" />
-                Request a Course
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Request a New Course</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4 pt-4">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    College Name
-                  </label>
-                  <Select 
-                    value={modalForm.college} 
-                    onValueChange={(value) => setModalForm(prev => ({ ...prev, college: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a college" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from(new Set(courses.map(c => c.college))).map(college => (
-                        <SelectItem key={college} value={college}>{college}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Semester
-                  </label>
-                  <Select 
-                    value={modalForm.semester} 
-                    onValueChange={(value) => setModalForm(prev => ({ ...prev, semester: value }))}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select semester" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1">Semester 1</SelectItem>
-                      <SelectItem value="2">Semester 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Course Name
-                  </label>
-                  <Input
-                    value={modalForm.courseName}
-                    onChange={(e) => setModalForm(prev => ({ ...prev, courseName: e.target.value }))}
-                    placeholder="Enter course name"
-                  />
-                </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">
-                    Department
-                  </label>
-                  <Input
-                    value={modalForm.department}
-                    onChange={(e) => setModalForm(prev => ({ ...prev, department: e.target.value }))}
-                    placeholder="Enter department"
-                  />
-                </div>
-                
-                <div className="flex gap-3 pt-4">
-                  <Button 
-                    onClick={handleModalSubmit}
-                    className="flex-1"
-                    disabled={!modalForm.college || !modalForm.semester || !modalForm.courseName || !modalForm.department}
-                  >
-                    Submit Request
-                  </Button>
-                  <Button 
-                    variant="outline" 
-                    onClick={() => setIsModalOpen(false)}
-                    className="flex-1"
-                  >
-                    Cancel
-                  </Button>
-                </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <h1 className="text-3xl lg:text-4xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
+              Course Catalog
+            </h1>
+            <p className="text-muted-foreground mt-2">Discover and request courses from top universities</p>
+          </div>
+          
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-foreground hidden sm:inline">Welcome, {currentUser.name}</span>
+                <Button variant="outline" size="sm" onClick={handleLogout}>
+                  Logout
+                </Button>
               </div>
-            </DialogContent>
-          </Dialog>
+            ) : (
+              <Button onClick={() => setIsAuthModalOpen(true)} variant="outline">
+                <LogIn className="h-4 w-4 mr-2" />
+                Sign In
+              </Button>
+            )}
+            
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+              <DialogTrigger asChild>
+                <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-medium px-4 lg:px-6 py-3 rounded-lg shadow-elegant">
+                  <Plus className="h-5 w-5 mr-2" />
+                  <span className="hidden sm:inline">Request a Course</span>
+                  <span className="sm:hidden">Request</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Request a New Course</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4 pt-4">
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      College Name
+                    </label>
+                    <Select 
+                      value={modalForm.college} 
+                      onValueChange={(value) => setModalForm(prev => ({ ...prev, college: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a college" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Array.from(new Set(courses.map(c => c.college))).map(college => (
+                          <SelectItem key={college} value={college}>{college}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Semester
+                    </label>
+                    <Select 
+                      value={modalForm.semester} 
+                      onValueChange={(value) => setModalForm(prev => ({ ...prev, semester: value }))}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select semester" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Semester 1</SelectItem>
+                        <SelectItem value="2">Semester 2</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Course Name
+                    </label>
+                    <Input
+                      value={modalForm.courseName}
+                      onChange={(e) => setModalForm(prev => ({ ...prev, courseName: e.target.value }))}
+                      placeholder="Enter course name"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-foreground mb-2 block">
+                      Department
+                    </label>
+                    <Input
+                      value={modalForm.department}
+                      onChange={(e) => setModalForm(prev => ({ ...prev, department: e.target.value }))}
+                      placeholder="Enter department"
+                    />
+                  </div>
+                  
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      onClick={handleModalSubmit}
+                      className="flex-1"
+                      disabled={!modalForm.college || !modalForm.semester || !modalForm.courseName || !modalForm.department}
+                    >
+                      Submit Request
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setIsModalOpen(false)}
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
 
         {/* Controls */}
-        <Card className="p-6 mb-6 shadow-card">
-          <div className="flex flex-wrap items-center gap-4">
-            <div className="flex-1 min-w-64">
+        <Card className="p-4 lg:p-6 mb-6 shadow-card">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -360,23 +482,29 @@ const CourseCatalog = () => {
               </div>
             </div>
             
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row gap-2">
               <Button
                 variant="outline"
                 onClick={() => handleSort('name')}
-                className={`${sortBy === 'name' ? 'bg-accent' : ''}`}
+                className={`${sortBy === 'name' ? 'bg-accent' : ''} text-sm`}
+                size="sm"
               >
                 <ArrowUpDown className="h-4 w-4 mr-2" />
-                College Name {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                <span className="hidden sm:inline">College Name</span>
+                <span className="sm:hidden">Name</span>
+                {sortBy === 'name' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
               </Button>
               
               <Button
                 variant="outline"
                 onClick={() => handleSort('requests')}
-                className={`${sortBy === 'requests' ? 'bg-accent' : ''}`}
+                className={`${sortBy === 'requests' ? 'bg-accent' : ''} text-sm`}
+                size="sm"
               >
                 <ArrowUpDown className="h-4 w-4 mr-2" />
-                Total Requests {sortBy === 'requests' && (sortOrder === 'asc' ? '↑' : '↓')}
+                <span className="hidden sm:inline">Total Requests</span>
+                <span className="sm:hidden">Requests</span>
+                {sortBy === 'requests' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
               </Button>
             </div>
           </div>
@@ -389,11 +517,11 @@ const CourseCatalog = () => {
               {/* College Header */}
               <button
                 onClick={() => toggleCollege(collegeName)}
-                className="w-full px-6 py-4 bg-card hover:bg-accent transition-colors text-left flex items-center justify-between"
+                className="w-full px-4 lg:px-6 py-4 bg-card hover:bg-accent transition-colors text-left flex items-center justify-between"
               >
                 <div>
-                  <h3 className="text-xl font-semibold text-foreground">{collegeName}</h3>
-                  <p className="text-muted-foreground mt-1">
+                  <h3 className="text-lg lg:text-xl font-semibold text-foreground">{collegeName}</h3>
+                  <p className="text-muted-foreground mt-1 text-sm lg:text-base">
                     Total requests: {totalRequests}
                   </p>
                 </div>
@@ -407,8 +535,8 @@ const CourseCatalog = () => {
               {/* Expanded Content */}
               {expandedColleges.has(collegeName) && (
                 <div className="border-t">
-                  {/* Column Headers */}
-                  <div className="grid grid-cols-12 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
+                  {/* Desktop Headers */}
+                  <div className="hidden lg:grid grid-cols-12 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
                     <div className="col-span-2">
                       {renderFilterableHeader(collegeName, 'department', 'Department')}
                     </div>
@@ -429,13 +557,85 @@ const CourseCatalog = () => {
                     const canUnrequest = userRequests.has(course.id);
 
                     return (
-                      <div key={course.id} className="grid grid-cols-12 gap-4 p-4 border-b last:border-b-0 hover:bg-accent/50 transition-colors">
-                        <div className="col-span-2 text-foreground">{course.department}</div>
-                        <div className="col-span-1 text-foreground">{course.semester}</div>
-                        <div className="col-span-3 text-foreground font-medium">{course.course}</div>
-                        
-                        {/* Progress Column */}
-                        <div className="col-span-3">
+                      <div key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors">
+                        {/* Desktop Layout */}
+                        <div className="hidden lg:grid grid-cols-12 gap-4 p-4">
+                          <div className="col-span-2 text-foreground text-sm">{course.department}</div>
+                          <div className="col-span-1 text-foreground text-sm">{course.semester}</div>
+                          <div className="col-span-3 text-foreground font-medium text-sm">{course.course}</div>
+                          
+                          {/* Progress Column */}
+                          <div className="col-span-3">
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Progress</span>
+                                <span className="font-medium text-foreground">
+                                  {course.requestCount}/25
+                                </span>
+                              </div>
+                              <Progress 
+                                value={progressPercentage} 
+                                className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
+                              />
+                            </div>
+                          </div>
+
+                          {/* Actions Column */}
+                          <div className="col-span-3">
+                            {course.status === 'active' && (
+                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                <Book className="h-4 w-4 mr-2" />
+                                Learn Now
+                              </Button>
+                            )}
+                            
+                            {course.status === 'progress' && (
+                              <span className="text-info font-medium text-sm">In Pipeline</span>
+                            )}
+                            
+                            {course.status === 'inactive' && (
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleRequest(course.id)}
+                                  className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md"
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUnrequest(course.id)}
+                                  disabled={!canUnrequest}
+                                  className="hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleShare(course)}
+                                  className="hover:bg-info hover:text-info-foreground"
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Mobile Layout */}
+                        <div className="lg:hidden p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <h4 className="font-medium text-foreground">{course.course}</h4>
+                              <p className="text-sm text-muted-foreground">{course.department} • Semester {course.semester}</p>
+                            </div>
+                          </div>
+                          
+                          {/* Mobile Progress */}
                           <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">Progress</span>
@@ -448,50 +648,52 @@ const CourseCatalog = () => {
                               className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
                             />
                           </div>
-                        </div>
 
-                        {/* Actions Column */}
-                        <div className="col-span-3">
-                          {course.status === 'active' && (
-                            <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                              <Book className="h-4 w-4 mr-2" />
-                              Learn Now
-                            </Button>
-                          )}
-                          
-                          {course.status === 'progress' && (
-                            <span className="text-info font-medium">In Pipeline</span>
-                          )}
-                          
-                          {course.status === 'inactive' && (
-                            <div className="flex items-center gap-2">
-                              <Button
-                                size="sm"
-                                onClick={() => handleRequest(course.id)}
-                                className="bg-primary hover:bg-primary/90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md"
-                              >
-                                <Plus className="h-4 w-4" />
+                          {/* Mobile Actions */}
+                          <div className="flex items-center justify-between pt-2">
+                            {course.status === 'active' && (
+                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground flex-1">
+                                <Book className="h-4 w-4 mr-2" />
+                                Learn Now
                               </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleUnrequest(course.id)}
-                                disabled={!canUnrequest}
-                                className="hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                              >
-                                <Minus className="h-4 w-4" />
-                              </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="hover:bg-info hover:text-info-foreground"
-                              >
-                                <Share2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          )}
+                            )}
+                            
+                            {course.status === 'progress' && (
+                              <span className="text-info font-medium text-sm">In Pipeline</span>
+                            )}
+                            
+                            {course.status === 'inactive' && (
+                              <div className="flex items-center gap-2 w-full">
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleRequest(course.id)}
+                                  className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md flex-1"
+                                >
+                                  <Plus className="h-4 w-4 mr-2" />
+                                  Request
+                                </Button>
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleUnrequest(course.id)}
+                                  disabled={!canUnrequest}
+                                  className="hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
+                                >
+                                  <Minus className="h-4 w-4" />
+                                </Button>
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleShare(course)}
+                                  className="hover:bg-info hover:text-info-foreground"
+                                >
+                                  <Share2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
@@ -514,6 +716,145 @@ const CourseCatalog = () => {
           )}
         </div>
       </div>
+
+      {/* Auth Modal */}
+      <Dialog open={isAuthModalOpen} onOpenChange={setIsAuthModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{authMode === 'signin' ? 'Sign In' : 'Create Account'}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            {authMode === 'signup' && (
+              <div>
+                <label className="text-sm font-medium text-foreground mb-2 block">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    value={authForm.name}
+                    onChange={(e) => setAuthForm(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="Enter your full name"
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+            )}
+            
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Email
+              </label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="email"
+                  value={authForm.email}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, email: e.target.value }))}
+                  placeholder="Enter your email"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="text-sm font-medium text-foreground mb-2 block">
+                Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="password"
+                  value={authForm.password}
+                  onChange={(e) => setAuthForm(prev => ({ ...prev, password: e.target.value }))}
+                  placeholder="Enter your password"
+                  className="pl-10"
+                />
+              </div>
+            </div>
+            
+            <div className="flex gap-3 pt-4">
+              <Button 
+                onClick={handleAuth}
+                className="flex-1 bg-gradient-primary hover:opacity-90"
+                disabled={!authForm.email || !authForm.password || (authMode === 'signup' && !authForm.name)}
+              >
+                {authMode === 'signin' ? (
+                  <>
+                    <LogIn className="h-4 w-4 mr-2" />
+                    Sign In
+                  </>
+                ) : (
+                  <>
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Create Account
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            <div className="text-center">
+              <button
+                onClick={() => setAuthMode(authMode === 'signin' ? 'signup' : 'signin')}
+                className="text-sm text-primary hover:underline"
+              >
+                {authMode === 'signin' 
+                  ? "Don't have an account? Sign up" 
+                  : "Already have an account? Sign in"}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Share Modal */}
+      <Dialog open={isShareModalOpen} onOpenChange={setIsShareModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Share this Course</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-4">
+            <p className="text-sm text-muted-foreground">
+              Share this with your friends and classmates to request this course. 
+              We will create this course once the request count reaches 25!
+            </p>
+            
+            {shareModalCourse && (
+              <div className="p-4 bg-muted rounded-lg">
+                <h4 className="font-medium text-foreground">{shareModalCourse.course}</h4>
+                <p className="text-sm text-muted-foreground">
+                  {shareModalCourse.college} • {shareModalCourse.department}
+                </p>
+                <p className="text-sm text-foreground mt-2">
+                  Current requests: {shareModalCourse.requestCount}/25
+                </p>
+              </div>
+            )}
+            
+            <div className="flex gap-2">
+              <Input 
+                value={window.location.href} 
+                readOnly 
+                className="flex-1"
+              />
+              <Button onClick={copyToClipboard} size="icon" variant="outline">
+                <Copy className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {navigator.share && (
+              <Button 
+                onClick={handleNativeShare} 
+                className="w-full" 
+                variant="outline"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share via Apps
+              </Button>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
