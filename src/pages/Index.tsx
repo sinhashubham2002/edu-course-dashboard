@@ -146,10 +146,8 @@ const CourseCatalog = () => {
   }, [courses, collegeFilter, sortBy, sortOrder]);
 
   const toggleCollege = (collegeName: string) => {
-    const newExpanded = new Set(expandedColleges);
-    if (newExpanded.has(collegeName)) {
-      newExpanded.delete(collegeName);
-    } else {
+    const newExpanded = new Set<string>();
+    if (!expandedColleges.has(collegeName)) {
       newExpanded.add(collegeName);
     }
     setExpandedColleges(newExpanded);
@@ -535,8 +533,32 @@ const CourseCatalog = () => {
               {/* Expanded Content */}
               {expandedColleges.has(collegeName) && (
                 <div className="border-t">
+                  {/* Mobile Filters */}
+                  <div className="lg:hidden p-4 border-b bg-muted/50">
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        placeholder="Department..."
+                        value={departmentFilter[collegeName] || ''}
+                        onChange={(e) => handleFilterChange(collegeName, 'department', e.target.value)}
+                        className="text-xs"
+                      />
+                      <Input
+                        placeholder="Semester..."
+                        value={semesterFilter[collegeName] || ''}
+                        onChange={(e) => handleFilterChange(collegeName, 'semester', e.target.value)}
+                        className="text-xs"
+                      />
+                      <Input
+                        placeholder="Course..."
+                        value={courseNameFilter[collegeName] || ''}
+                        onChange={(e) => handleFilterChange(collegeName, 'courseName', e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                  </div>
+
                   {/* Desktop Headers */}
-                  <div className="hidden lg:grid grid-cols-12 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
+                  <div className="hidden lg:grid grid-cols-14 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
                     <div className="col-span-2">
                       {renderFilterableHeader(collegeName, 'department', 'Department')}
                     </div>
@@ -546,6 +568,7 @@ const CourseCatalog = () => {
                     <div className="col-span-3">
                       {renderFilterableHeader(collegeName, 'courseName', 'Course Name')}
                     </div>
+                    <div className="col-span-2">Status</div>
                     <div className="col-span-3">Request Progress</div>
                     <div className="col-span-3">Actions</div>
                   </div>
@@ -559,10 +582,23 @@ const CourseCatalog = () => {
                     return (
                       <div key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors">
                         {/* Desktop Layout */}
-                        <div className="hidden lg:grid grid-cols-12 gap-4 p-4">
+                        <div className="hidden lg:grid grid-cols-14 gap-4 p-4">
                           <div className="col-span-2 text-foreground text-sm">{course.department}</div>
                           <div className="col-span-1 text-foreground text-sm">{course.semester}</div>
                           <div className="col-span-3 text-foreground font-medium text-sm">{course.course}</div>
+                          
+                          {/* Status Column */}
+                          <div className="col-span-2">
+                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                              course.status === 'active' ? 'bg-success/20 text-success' :
+                              course.status === 'progress' ? 'bg-info/20 text-info' :
+                              'bg-warning/20 text-warning'
+                            }`}>
+                              {course.status === 'active' ? 'Active' :
+                               course.status === 'progress' ? 'In Pipeline' :
+                               'Request Needed'}
+                            </span>
+                          </div>
                           
                           {/* Progress Column */}
                           <div className="col-span-3">
@@ -582,47 +618,31 @@ const CourseCatalog = () => {
 
                           {/* Actions Column */}
                           <div className="col-span-3">
-                            {course.status === 'active' && (
-                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                                <Book className="h-4 w-4 mr-2" />
-                                Learn Now
+                            <div className="flex items-center gap-2">
+                              {course.status === 'active' && (
+                                <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                  <Book className="h-4 w-4 mr-2" />
+                                  Learn Now
+                                </Button>
+                              )}
+                              
+                              <Button
+                                size="sm"
+                                onClick={() => handleRequest(course.id)}
+                                className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md"
+                              >
+                                Request
                               </Button>
-                            )}
-                            
-                            {course.status === 'progress' && (
-                              <span className="text-info font-medium text-sm">In Pipeline</span>
-                            )}
-                            
-                            {course.status === 'inactive' && (
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleRequest(course.id)}
-                                  className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md"
-                                >
-                                  <Plus className="h-4 w-4" />
-                                </Button>
-                                
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleUnrequest(course.id)}
-                                  disabled={!canUnrequest}
-                                  className="hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleShare(course)}
-                                  className="hover:bg-info hover:text-info-foreground"
-                                >
-                                  <Share2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
+                              
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleShare(course)}
+                                className="hover:bg-info hover:text-info-foreground"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
@@ -632,6 +652,15 @@ const CourseCatalog = () => {
                             <div className="flex-1">
                               <h4 className="font-medium text-foreground">{course.course}</h4>
                               <p className="text-sm text-muted-foreground">{course.department} • Semester {course.semester}</p>
+                              <span className={`inline-block text-xs font-medium px-2 py-1 rounded-full mt-1 ${
+                                course.status === 'active' ? 'bg-success/20 text-success' :
+                                course.status === 'progress' ? 'bg-info/20 text-info' :
+                                'bg-warning/20 text-warning'
+                              }`}>
+                                {course.status === 'active' ? 'Active' :
+                                 course.status === 'progress' ? 'In Pipeline' :
+                                 'Request Needed'}
+                              </span>
                             </div>
                           </div>
                           
@@ -650,49 +679,30 @@ const CourseCatalog = () => {
                           </div>
 
                           {/* Mobile Actions */}
-                          <div className="flex items-center justify-between pt-2">
+                          <div className="flex items-center gap-2 pt-2">
                             {course.status === 'active' && (
-                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground flex-1">
+                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
                                 <Book className="h-4 w-4 mr-2" />
                                 Learn Now
                               </Button>
                             )}
                             
-                            {course.status === 'progress' && (
-                              <span className="text-info font-medium text-sm">In Pipeline</span>
-                            )}
+                            <Button
+                              size="sm"
+                              onClick={() => handleRequest(course.id)}
+                              className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md flex-1"
+                            >
+                              Request
+                            </Button>
                             
-                            {course.status === 'inactive' && (
-                              <div className="flex items-center gap-2 w-full">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleRequest(course.id)}
-                                  className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md flex-1"
-                                >
-                                  <Plus className="h-4 w-4 mr-2" />
-                                  Request
-                                </Button>
-                                
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleUnrequest(course.id)}
-                                  disabled={!canUnrequest}
-                                  className="hover:bg-destructive hover:text-destructive-foreground disabled:opacity-50"
-                                >
-                                  <Minus className="h-4 w-4" />
-                                </Button>
-                                
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleShare(course)}
-                                  className="hover:bg-info hover:text-info-foreground"
-                                >
-                                  <Share2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            )}
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleShare(course)}
+                              className="hover:bg-info hover:text-info-foreground"
+                            >
+                              <Share2 className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
