@@ -561,165 +561,172 @@ const CourseCatalog = () => {
                     </div>
                   </div>
 
-                  {/* Desktop Headers */}
-                  <div className="hidden md:grid grid-cols-14 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
-                    <div className="col-span-2">
-                      {renderFilterableHeader(collegeName, 'department', 'Department')}
-                    </div>
-                    <div className="col-span-1">
-                      {renderFilterableHeader(collegeName, 'semester', 'Sem')}
-                    </div>
-                    <div className="col-span-3">
-                      {renderFilterableHeader(collegeName, 'courseName', 'Course Name')}
-                    </div>
-                    <div className="col-span-2">Status</div>
-                    <div className="col-span-3">Request Progress</div>
-                    <div className="col-span-3">Actions</div>
+                  {/* Desktop Table Layout */}
+                  <div className="hidden md:block overflow-x-auto">
+                    <table className="w-full">
+                      <thead>
+                        <tr className="bg-muted/50 border-b">
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">
+                            {renderFilterableHeader(collegeName, 'department', 'Department')}
+                          </th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">
+                            {renderFilterableHeader(collegeName, 'semester', 'Semester')}
+                          </th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">
+                            {renderFilterableHeader(collegeName, 'courseName', 'Course Name')}
+                          </th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">Status</th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">Request Progress</th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getFilteredCourses(collegeCourses, collegeName).map(course => {
+                          const progressPercentage = Math.min((course.requestCount / 25) * 100, 100);
+                          const isComplete = course.requestCount >= 25;
+                          const hasRequested = userRequests.has(course.id);
+
+                          return (
+                            <tr key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors">
+                              <td className="p-4 text-foreground text-sm">{course.department}</td>
+                              <td className="p-4 text-foreground text-sm">{course.semester}</td>
+                              <td className="p-4 text-foreground font-medium text-sm">{course.course}</td>
+                              <td className="p-4">
+                                <span className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                  course.status === 'active' ? 'bg-success/20 text-success' :
+                                  course.status === 'progress' ? 'bg-info/20 text-info' :
+                                  'bg-warning/20 text-warning'
+                                }`}>
+                                  {course.status === 'active' ? 'Active' :
+                                   course.status === 'progress' ? 'In Pipeline' :
+                                   'Request Needed'}
+                                </span>
+                              </td>
+                              <td className="p-4">
+                                <div className="space-y-2 min-w-[120px]">
+                                  <div className="flex justify-between text-sm">
+                                    <span className="text-muted-foreground">Progress</span>
+                                    <span className="font-medium text-foreground">
+                                      {course.requestCount}/25
+                                    </span>
+                                  </div>
+                                  <Progress 
+                                    value={progressPercentage} 
+                                    className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
+                                  />
+                                </div>
+                              </td>
+                              <td className="p-4">
+                                <div className="flex items-center gap-2">
+                                  {course.status === 'active' && (
+                                    <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                      <Book className="h-4 w-4 mr-2" />
+                                      Learn Now
+                                    </Button>
+                                  )}
+                                  
+                                  <Button
+                                    size="sm"
+                                    onClick={() => handleRequest(course.id)}
+                                    className={`transform hover:scale-105 transition-all duration-200 shadow-md ${
+                                      hasRequested 
+                                        ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+                                        : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
+                                    }`}
+                                  >
+                                    {hasRequested ? 'Withdraw' : 'Request'}
+                                  </Button>
+                                  
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => handleShare(course)}
+                                    className="hover:bg-info hover:text-info-foreground"
+                                  >
+                                    <Share2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
 
-                  {/* Course Rows */}
-                  {getFilteredCourses(collegeCourses, collegeName).map(course => {
-                    const progressPercentage = Math.min((course.requestCount / 25) * 100, 100);
-                    const isComplete = course.requestCount >= 25;
-                    const hasRequested = userRequests.has(course.id);
+                   {/* Mobile Layout */}
+                   <div className="md:hidden">
+                     {getFilteredCourses(collegeCourses, collegeName).map(course => {
+                       const progressPercentage = Math.min((course.requestCount / 25) * 100, 100);
+                       const isComplete = course.requestCount >= 25;
+                       const hasRequested = userRequests.has(course.id);
 
-                    return (
-                      <div key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors">
-                        {/* Desktop Layout */}
-                        <div className="hidden md:grid grid-cols-14 gap-4 p-4">
-                          <div className="col-span-2 text-foreground text-sm">{course.department}</div>
-                          <div className="col-span-1 text-foreground text-sm">{course.semester}</div>
-                          <div className="col-span-3 text-foreground font-medium text-sm">{course.course}</div>
-                          
-                          {/* Status Column */}
-                          <div className="col-span-2">
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full ${
-                              course.status === 'active' ? 'bg-success/20 text-success' :
-                              course.status === 'progress' ? 'bg-info/20 text-info' :
-                              'bg-warning/20 text-warning'
-                            }`}>
-                              {course.status === 'active' ? 'Active' :
-                               course.status === 'progress' ? 'In Pipeline' :
-                               'Request Needed'}
-                            </span>
-                          </div>
-                          
-                          {/* Progress Column */}
-                          <div className="col-span-3">
-                            <div className="space-y-2">
-                              <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Progress</span>
-                                <span className="font-medium text-foreground">
-                                  {course.requestCount}/25
-                                </span>
-                              </div>
-                              <Progress 
-                                value={progressPercentage} 
-                                className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
-                              />
-                            </div>
-                          </div>
+                       return (
+                         <div key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors p-4 space-y-3">
+                           <div className="flex justify-between items-start">
+                             <div className="flex-1">
+                               <h4 className="font-medium text-foreground">{course.course}</h4>
+                               <p className="text-sm text-muted-foreground">{course.department} • Semester {course.semester}</p>
+                               <span className={`inline-block text-xs font-medium px-2 py-1 rounded-full mt-1 ${
+                                 course.status === 'active' ? 'bg-success/20 text-success' :
+                                 course.status === 'progress' ? 'bg-info/20 text-info' :
+                                 'bg-warning/20 text-warning'
+                               }`}>
+                                 {course.status === 'active' ? 'Active' :
+                                  course.status === 'progress' ? 'In Pipeline' :
+                                  'Request Needed'}
+                               </span>
+                             </div>
+                           </div>
+                           
+                           {/* Mobile Progress */}
+                           <div className="space-y-2">
+                             <div className="flex justify-between text-sm">
+                               <span className="text-muted-foreground">Progress</span>
+                               <span className="font-medium text-foreground">
+                                 {course.requestCount}/25
+                               </span>
+                             </div>
+                             <Progress 
+                               value={progressPercentage} 
+                               className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
+                             />
+                           </div>
 
-                          {/* Actions Column */}
-                          <div className="col-span-3">
-                            <div className="flex items-center gap-2">
-                              {course.status === 'active' && (
-                                <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                                  <Book className="h-4 w-4 mr-2" />
-                                  Learn Now
-                                </Button>
-                              )}
-                              
-                              <Button
-                                size="sm"
-                                onClick={() => handleRequest(course.id)}
-                                className={`transform hover:scale-105 transition-all duration-200 shadow-md ${
-                                  hasRequested 
-                                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
-                                    : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
-                                }`}
-                              >
-                                {hasRequested ? 'Withdraw' : 'Request'}
-                              </Button>
-                              
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleShare(course)}
-                                className="hover:bg-info hover:text-info-foreground"
-                              >
-                                <Share2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Mobile Layout */}
-                        <div className="md:hidden p-4 space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <h4 className="font-medium text-foreground">{course.course}</h4>
-                              <p className="text-sm text-muted-foreground">{course.department} • Semester {course.semester}</p>
-                              <span className={`inline-block text-xs font-medium px-2 py-1 rounded-full mt-1 ${
-                                course.status === 'active' ? 'bg-success/20 text-success' :
-                                course.status === 'progress' ? 'bg-info/20 text-info' :
-                                'bg-warning/20 text-warning'
-                              }`}>
-                                {course.status === 'active' ? 'Active' :
-                                 course.status === 'progress' ? 'In Pipeline' :
-                                 'Request Needed'}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          {/* Mobile Progress */}
-                          <div className="space-y-2">
-                            <div className="flex justify-between text-sm">
-                              <span className="text-muted-foreground">Progress</span>
-                              <span className="font-medium text-foreground">
-                                {course.requestCount}/25
-                              </span>
-                            </div>
-                            <Progress 
-                              value={progressPercentage} 
-                              className={`h-2 ${isComplete ? 'bg-progress-complete/20' : 'bg-progress-incomplete/20'}`}
-                            />
-                          </div>
-
-                          {/* Mobile Actions */}
-                          <div className="flex items-center gap-2 pt-2">
-                            {course.status === 'active' && (
-                              <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                                <Book className="h-4 w-4 mr-2" />
-                                Learn Now
-                              </Button>
-                            )}
-                            
-                            <Button
-                              size="sm"
-                              onClick={() => handleRequest(course.id)}
-                              className={`transform hover:scale-105 transition-all duration-200 shadow-md flex-1 ${
-                                hasRequested 
-                                  ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
-                                  : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
-                              }`}
-                            >
-                              {hasRequested ? 'Withdraw' : 'Request'}
-                            </Button>
-                            
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => handleShare(course)}
-                              className="hover:bg-info hover:text-info-foreground"
-                            >
-                              <Share2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
+                           {/* Mobile Actions */}
+                           <div className="flex items-center gap-2 pt-2">
+                             {course.status === 'active' && (
+                               <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                 <Book className="h-4 w-4 mr-2" />
+                                 Learn Now
+                               </Button>
+                             )}
+                             
+                             <Button
+                               size="sm"
+                               onClick={() => handleRequest(course.id)}
+                               className={`transform hover:scale-105 transition-all duration-200 shadow-md flex-1 ${
+                                 hasRequested 
+                                   ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+                                   : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
+                               }`}
+                             >
+                               {hasRequested ? 'Withdraw' : 'Request'}
+                             </Button>
+                             
+                             <Button
+                               size="sm"
+                               variant="outline"
+                               onClick={() => handleShare(course)}
+                               className="hover:bg-info hover:text-info-foreground"
+                             >
+                               <Share2 className="h-4 w-4" />
+                             </Button>
+                           </div>
+                         </div>
+                       );
+                     })}
+                   </div>
                   
                   {getFilteredCourses(collegeCourses, collegeName).length === 0 && (
                     <div className="p-8 text-center text-muted-foreground">
