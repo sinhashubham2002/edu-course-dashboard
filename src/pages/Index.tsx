@@ -159,35 +159,37 @@ const CourseCatalog = () => {
       return;
     }
 
-    setCourses(prev => prev.map(course => 
-      course.id === courseId 
-        ? { ...course, requestCount: course.requestCount + 1 }
-        : course
-    ));
-    setUserRequests(prev => new Set([...prev, courseId]));
-    toast({
-      title: "Course requested!",
-      description: "Your request has been added successfully.",
-    });
-  };
-
-  const handleUnrequest = (courseId: string) => {
-    if (!currentUser || !userRequests.has(courseId)) return;
-
-    setCourses(prev => prev.map(course => 
-      course.id === courseId 
-        ? { ...course, requestCount: Math.max(0, course.requestCount - 1) }
-        : course
-    ));
-    setUserRequests(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(courseId);
-      return newSet;
-    });
-    toast({
-      title: "Request removed",
-      description: "Your course request has been removed.",
-    });
+    const hasRequested = userRequests.has(courseId);
+    
+    if (hasRequested) {
+      // Withdraw request
+      setCourses(prev => prev.map(course => 
+        course.id === courseId 
+          ? { ...course, requestCount: Math.max(0, course.requestCount - 1) }
+          : course
+      ));
+      setUserRequests(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(courseId);
+        return newSet;
+      });
+      toast({
+        title: "Request withdrawn",
+        description: "Your course request has been withdrawn.",
+      });
+    } else {
+      // Add request
+      setCourses(prev => prev.map(course => 
+        course.id === courseId 
+          ? { ...course, requestCount: course.requestCount + 1 }
+          : course
+      ));
+      setUserRequests(prev => new Set([...prev, courseId]));
+      toast({
+        title: "Course requested!",
+        description: "Your request has been added successfully.",
+      });
+    }
   };
 
   const handleShare = (course: Course) => {
@@ -196,20 +198,22 @@ const CourseCatalog = () => {
   };
 
   const copyToClipboard = () => {
-    const currentUrl = window.location.href;
-    navigator.clipboard.writeText(currentUrl).then(() => {
-      toast({
-        title: "Link copied!",
-        description: "Course page link has been copied to clipboard.",
+    if (shareModalCourse) {
+      const message = `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}`;
+      navigator.clipboard.writeText(message).then(() => {
+        toast({
+          title: "Message copied!",
+          description: "Course request message has been copied to clipboard.",
+        });
       });
-    });
+    }
   };
 
   const handleNativeShare = () => {
     if (navigator.share && shareModalCourse) {
       navigator.share({
         title: `Request ${shareModalCourse.course}`,
-        text: `Help me request ${shareModalCourse.course} at ${shareModalCourse.college}. We need 25 requests to make this course happen!`,
+        text: `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests.`,
         url: window.location.href
       }).catch(console.error);
     }
@@ -534,7 +538,7 @@ const CourseCatalog = () => {
               {expandedColleges.has(collegeName) && (
                 <div className="border-t">
                   {/* Mobile Filters */}
-                  <div className="lg:hidden p-4 border-b bg-muted/50">
+                  <div className="md:hidden p-4 border-b bg-muted/50">
                     <div className="grid grid-cols-3 gap-2">
                       <Input
                         placeholder="Department..."
@@ -558,7 +562,7 @@ const CourseCatalog = () => {
                   </div>
 
                   {/* Desktop Headers */}
-                  <div className="hidden lg:grid grid-cols-14 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
+                  <div className="hidden md:grid grid-cols-14 gap-4 p-4 bg-muted/50 border-b font-medium text-sm text-muted-foreground">
                     <div className="col-span-2">
                       {renderFilterableHeader(collegeName, 'department', 'Department')}
                     </div>
@@ -577,12 +581,12 @@ const CourseCatalog = () => {
                   {getFilteredCourses(collegeCourses, collegeName).map(course => {
                     const progressPercentage = Math.min((course.requestCount / 25) * 100, 100);
                     const isComplete = course.requestCount >= 25;
-                    const canUnrequest = userRequests.has(course.id);
+                    const hasRequested = userRequests.has(course.id);
 
                     return (
                       <div key={course.id} className="border-b last:border-b-0 hover:bg-accent/50 transition-colors">
                         {/* Desktop Layout */}
-                        <div className="hidden lg:grid grid-cols-14 gap-4 p-4">
+                        <div className="hidden md:grid grid-cols-14 gap-4 p-4">
                           <div className="col-span-2 text-foreground text-sm">{course.department}</div>
                           <div className="col-span-1 text-foreground text-sm">{course.semester}</div>
                           <div className="col-span-3 text-foreground font-medium text-sm">{course.course}</div>
@@ -629,9 +633,13 @@ const CourseCatalog = () => {
                               <Button
                                 size="sm"
                                 onClick={() => handleRequest(course.id)}
-                                className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md"
+                                className={`transform hover:scale-105 transition-all duration-200 shadow-md ${
+                                  hasRequested 
+                                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+                                    : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
+                                }`}
                               >
-                                Request
+                                {hasRequested ? 'Withdraw' : 'Request'}
                               </Button>
                               
                               <Button
@@ -647,7 +655,7 @@ const CourseCatalog = () => {
                         </div>
 
                         {/* Mobile Layout */}
-                        <div className="lg:hidden p-4 space-y-3">
+                        <div className="md:hidden p-4 space-y-3">
                           <div className="flex justify-between items-start">
                             <div className="flex-1">
                               <h4 className="font-medium text-foreground">{course.course}</h4>
@@ -690,9 +698,13 @@ const CourseCatalog = () => {
                             <Button
                               size="sm"
                               onClick={() => handleRequest(course.id)}
-                              className="bg-gradient-primary hover:opacity-90 text-primary-foreground transform hover:scale-105 transition-all duration-200 shadow-md flex-1"
+                              className={`transform hover:scale-105 transition-all duration-200 shadow-md flex-1 ${
+                                hasRequested 
+                                  ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+                                  : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
+                              }`}
                             >
-                              Request
+                              {hasRequested ? 'Withdraw' : 'Request'}
                             </Button>
                             
                             <Button
@@ -843,7 +855,7 @@ const CourseCatalog = () => {
             
             <div className="flex gap-2">
               <Input 
-                value={window.location.href} 
+                value={shareModalCourse ? `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}` : window.location.href}
                 readOnly 
                 className="flex-1"
               />
