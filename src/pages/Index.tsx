@@ -199,7 +199,14 @@ const CourseCatalog = () => {
 
   const copyToClipboard = () => {
     if (shareModalCourse) {
-      const message = `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}`;
+      let message = '';
+      
+      if (shareModalCourse.status === 'active') {
+        message = `Share this with your friend and start learning together! "${shareModalCourse.course}" at ${shareModalCourse.college} is now active with ${shareModalCourse.requestCount} requests. Join me: ${window.location.href}`;
+      } else {
+        message = `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}`;
+      }
+      
       navigator.clipboard.writeText(message).then(() => {
         toast({
           title: "Message copied!",
@@ -211,9 +218,17 @@ const CourseCatalog = () => {
 
   const handleNativeShare = () => {
     if (navigator.share && shareModalCourse) {
+      let shareText = '';
+      
+      if (shareModalCourse.status === 'active') {
+        shareText = `Share this with your friend and start learning together! "${shareModalCourse.course}" at ${shareModalCourse.college} is now active with ${shareModalCourse.requestCount} requests.`;
+      } else {
+        shareText = `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests.`;
+      }
+      
       navigator.share({
-        title: `Request ${shareModalCourse.course}`,
-        text: `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests.`,
+        title: `${shareModalCourse.status === 'active' ? 'Join' : 'Request'} ${shareModalCourse.course}`,
+        text: shareText,
         url: window.location.href
       }).catch(console.error);
     }
@@ -575,7 +590,7 @@ const CourseCatalog = () => {
                           <th className="text-left p-4 font-medium text-sm text-muted-foreground">
                             {renderFilterableHeader(collegeName, 'courseName', 'Course Name')}
                           </th>
-                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">Status</th>
+                          <th className="text-left p-4 font-medium text-sm text-muted-foreground">Course Status</th>
                           <th className="text-left p-4 font-medium text-sm text-muted-foreground">Request Progress</th>
                           <th className="text-left p-4 font-medium text-sm text-muted-foreground">Actions</th>
                         </tr>
@@ -618,13 +633,6 @@ const CourseCatalog = () => {
                               </td>
                               <td className="p-4">
                                 <div className="flex items-center gap-2">
-                                  {course.status === 'active' && (
-                                    <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                                      <Book className="h-4 w-4 mr-2" />
-                                      Learn Now
-                                    </Button>
-                                  )}
-                                  
                                   <Button
                                     size="sm"
                                     onClick={() => handleRequest(course.id)}
@@ -645,6 +653,13 @@ const CourseCatalog = () => {
                                   >
                                     <Share2 className="h-4 w-4" />
                                   </Button>
+                                  
+                                  {course.status === 'active' && (
+                                    <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                      <Book className="h-4 w-4 mr-2" />
+                                      Learn Now
+                                    </Button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
@@ -693,36 +708,36 @@ const CourseCatalog = () => {
                              />
                            </div>
 
-                           {/* Mobile Actions */}
-                           <div className="flex items-center gap-2 pt-2">
-                             {course.status === 'active' && (
-                               <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
-                                 <Book className="h-4 w-4 mr-2" />
-                                 Learn Now
-                               </Button>
-                             )}
-                             
-                             <Button
-                               size="sm"
-                               onClick={() => handleRequest(course.id)}
-                               className={`transform hover:scale-105 transition-all duration-200 shadow-md flex-1 ${
-                                 hasRequested 
-                                   ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
-                                   : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
-                               }`}
-                             >
-                               {hasRequested ? 'Withdraw' : 'Request'}
-                             </Button>
-                             
-                             <Button
-                               size="sm"
-                               variant="outline"
-                               onClick={() => handleShare(course)}
-                               className="hover:bg-info hover:text-info-foreground"
-                             >
-                               <Share2 className="h-4 w-4" />
-                             </Button>
-                           </div>
+                            {/* Mobile Actions */}
+                            <div className="flex items-center gap-2 pt-2">
+                              <Button
+                                size="sm"
+                                onClick={() => handleRequest(course.id)}
+                                className={`transform hover:scale-105 transition-all duration-200 shadow-md flex-1 ${
+                                  hasRequested 
+                                    ? 'bg-destructive hover:bg-destructive/90 text-destructive-foreground' 
+                                    : 'bg-gradient-primary hover:opacity-90 text-primary-foreground'
+                                }`}
+                              >
+                                {hasRequested ? 'Withdraw' : 'Request'}
+                              </Button>
+                              
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleShare(course)}
+                                className="hover:bg-info hover:text-info-foreground"
+                              >
+                                <Share2 className="h-4 w-4" />
+                              </Button>
+                              
+                              {course.status === 'active' && (
+                                <Button size="sm" className="bg-success hover:bg-success/90 text-success-foreground">
+                                  <Book className="h-4 w-4 mr-2" />
+                                  Learn Now
+                                </Button>
+                              )}
+                            </div>
                          </div>
                        );
                      })}
@@ -862,7 +877,11 @@ const CourseCatalog = () => {
             
             <div className="flex gap-2">
               <Input 
-                value={shareModalCourse ? `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}` : window.location.href}
+                value={shareModalCourse ? (
+                  shareModalCourse.status === 'active' 
+                    ? `Share this with your friend and start learning together! "${shareModalCourse.course}" at ${shareModalCourse.college} is now active with ${shareModalCourse.requestCount} requests. Join me: ${window.location.href}`
+                    : `Help me request "${shareModalCourse.course}" at ${shareModalCourse.college}! We need 25 requests to make this course happen. Currently at ${shareModalCourse.requestCount}/25 requests. Join me: ${window.location.href}`
+                ) : window.location.href}
                 readOnly 
                 className="flex-1"
               />
