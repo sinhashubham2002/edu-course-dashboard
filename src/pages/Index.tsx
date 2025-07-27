@@ -118,7 +118,18 @@ const CourseCatalog = () => {
   });
 
   // College autocomplete state
-  const [collegePopoverOpen, setCollegePopoverOpen] = useState(false);
+  const [showCollegeSuggestions, setShowCollegeSuggestions] = useState(false);
+  
+  // Get filtered college suggestions
+  const getCollegeSuggestions = () => {
+    if (!modalForm.college) return [];
+    return Array.from(new Set(courses.map(c => c.college)))
+      .filter(college => 
+        college.toLowerCase().includes(modalForm.college.toLowerCase()) &&
+        college.toLowerCase() !== modalForm.college.toLowerCase()
+      )
+      .slice(0, 5); // Limit to 5 suggestions
+  };
 
   const [authForm, setAuthForm] = useState({
     name: '',
@@ -424,54 +435,41 @@ const CourseCatalog = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       College Name
                     </label>
-                    <Popover open={collegePopoverOpen} onOpenChange={setCollegePopoverOpen}>
-                      <PopoverTrigger asChild>
-                        <Button
-                          variant="outline"
-                          role="combobox"
-                          aria-expanded={collegePopoverOpen}
-                          className="w-full justify-between"
-                        >
-                          {modalForm.college || "Type or select a college..."}
-                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-full p-0" align="start">
-                        <Command>
-                          <CommandInput 
-                            placeholder="Search colleges..." 
-                            value={modalForm.college}
-                            onValueChange={(value) => setModalForm(prev => ({ ...prev, college: value }))}
-                          />
-                          <CommandList>
-                            <CommandEmpty>No college found.</CommandEmpty>
-                            <CommandGroup>
-                              {Array.from(new Set(courses.map(c => c.college)))
-                                .filter(college => 
-                                  college.toLowerCase().includes(modalForm.college.toLowerCase())
-                                )
-                                .map((college) => (
-                                <CommandItem
-                                  key={college}
-                                  value={college}
-                                  onSelect={(currentValue) => {
-                                    setModalForm(prev => ({ ...prev, college: currentValue }));
-                                    setCollegePopoverOpen(false);
-                                  }}
-                                >
-                                  <Check
-                                    className={`mr-2 h-4 w-4 ${
-                                      modalForm.college === college ? "opacity-100" : "opacity-0"
-                                    }`}
-                                  />
-                                  {college}
-                                </CommandItem>
-                              ))}
-                            </CommandGroup>
-                          </CommandList>
-                        </Command>
-                      </PopoverContent>
-                    </Popover>
+                    <div className="relative">
+                      <Input
+                        value={modalForm.college}
+                        onChange={(e) => {
+                          setModalForm(prev => ({ ...prev, college: e.target.value }));
+                          setShowCollegeSuggestions(e.target.value.length > 0);
+                        }}
+                        onFocus={() => setShowCollegeSuggestions(modalForm.college.length > 0)}
+                        onBlur={() => {
+                          // Delay hiding suggestions to allow for clicks
+                          setTimeout(() => setShowCollegeSuggestions(false), 200);
+                        }}
+                        placeholder="Type college name..."
+                        className="w-full"
+                      />
+                      
+                      {/* Suggestions Dropdown */}
+                      {showCollegeSuggestions && getCollegeSuggestions().length > 0 && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                          {getCollegeSuggestions().map((college) => (
+                            <button
+                              key={college}
+                              type="button"
+                              onClick={() => {
+                                setModalForm(prev => ({ ...prev, college }));
+                                setShowCollegeSuggestions(false);
+                              }}
+                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
+                            >
+                              {college}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div>
