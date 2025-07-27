@@ -393,189 +393,195 @@ const CourseCatalog = () => {
 
   return (
     <div className="min-h-screen bg-gradient-background">
-      <div className="max-w-7xl mx-auto p-4 lg:p-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
-          <div>
-            <h1 className="text-3xl lg:text-4xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
-              Course Catalog
-            </h1>
-            <p className="text-muted-foreground mt-2">Discover and request courses from top universities</p>
-          </div>
-          
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            {currentUser ? (
-              <div className="flex items-center gap-3">
-                <span className="text-sm text-foreground hidden sm:inline">Welcome, {currentUser.name}</span>
-                <Button variant="outline" size="sm" onClick={handleLogout}>
-                  Logout
-                </Button>
-              </div>
-            ) : (
-              <Button onClick={() => setIsAuthModalOpen(true)} variant="outline">
-                <LogIn className="h-4 w-4 mr-2" />
-                Sign In
-              </Button>
-            )}
+      {/* Sticky Header Section */}
+      <div className="sticky top-0 z-40 bg-gradient-background/95 backdrop-blur-sm border-b border-border/50">
+        <div className="max-w-7xl mx-auto p-4 lg:p-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h1 className="text-3xl lg:text-4xl font-bold text-foreground bg-gradient-primary bg-clip-text text-transparent">
+                Course Popularity Leaderboard
+              </h1>
+              <p className="text-muted-foreground mt-2">Discover and request courses from top universities</p>
+            </div>
             
-            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-              <DialogTrigger asChild>
-                <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-medium px-4 lg:px-6 py-3 rounded-lg shadow-elegant">
-                  <Plus className="h-5 w-5 mr-2" />
-                  <span className="hidden sm:inline">Request a Course</span>
-                  <span className="sm:hidden">Request</span>
+            <div className="flex items-center gap-3 w-full sm:w-auto">
+              {currentUser ? (
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-foreground hidden sm:inline">Welcome, {currentUser.name}</span>
+                  <Button variant="outline" size="sm" onClick={handleLogout}>
+                    Logout
+                  </Button>
+                </div>
+              ) : (
+                <Button onClick={() => setIsAuthModalOpen(true)} variant="outline">
+                  <LogIn className="h-4 w-4 mr-2" />
+                  Sign In
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Request a New Course</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4 pt-4">
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      College Name
-                    </label>
-                    <div className="relative">
+              )}
+              
+              <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogTrigger asChild>
+                  <Button className="bg-gradient-primary hover:opacity-90 text-primary-foreground font-medium px-4 lg:px-6 py-3 rounded-lg shadow-elegant">
+                    <Plus className="h-5 w-5 mr-2" />
+                    <span className="hidden sm:inline">Add College / Course</span>
+                    <span className="sm:hidden">Add</span>
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Request a New Course</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4 pt-4">
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        College Name
+                      </label>
+                      <div className="relative">
+                        <Input
+                          value={modalForm.college}
+                          onChange={(e) => {
+                            setModalForm(prev => ({ ...prev, college: e.target.value }));
+                            setShowCollegeSuggestions(e.target.value.length > 0);
+                          }}
+                          onFocus={() => setShowCollegeSuggestions(modalForm.college.length > 0)}
+                          onBlur={() => {
+                            // Delay hiding suggestions to allow for clicks
+                            setTimeout(() => setShowCollegeSuggestions(false), 200);
+                          }}
+                          placeholder="Type college name..."
+                          className="w-full"
+                        />
+                        
+                        {/* Suggestions Dropdown */}
+                        {showCollegeSuggestions && getCollegeSuggestions().length > 0 && (
+                          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
+                            {getCollegeSuggestions().map((college) => (
+                              <button
+                                key={college}
+                                type="button"
+                                onClick={() => {
+                                  setModalForm(prev => ({ ...prev, college }));
+                                  setShowCollegeSuggestions(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
+                              >
+                                {college}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Semester
+                      </label>
+                      <Select 
+                        value={modalForm.semester} 
+                        onValueChange={(value) => setModalForm(prev => ({ ...prev, semester: value }))}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select semester" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Semester 1</SelectItem>
+                          <SelectItem value="2">Semester 2</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Course Name
+                      </label>
                       <Input
-                        value={modalForm.college}
-                        onChange={(e) => {
-                          setModalForm(prev => ({ ...prev, college: e.target.value }));
-                          setShowCollegeSuggestions(e.target.value.length > 0);
-                        }}
-                        onFocus={() => setShowCollegeSuggestions(modalForm.college.length > 0)}
-                        onBlur={() => {
-                          // Delay hiding suggestions to allow for clicks
-                          setTimeout(() => setShowCollegeSuggestions(false), 200);
-                        }}
-                        placeholder="Type college name..."
-                        className="w-full"
+                        value={modalForm.courseName}
+                        onChange={(e) => setModalForm(prev => ({ ...prev, courseName: e.target.value }))}
+                        placeholder="Enter course name"
                       />
-                      
-                      {/* Suggestions Dropdown */}
-                      {showCollegeSuggestions && getCollegeSuggestions().length > 0 && (
-                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-popover border border-border rounded-md shadow-lg max-h-48 overflow-y-auto">
-                          {getCollegeSuggestions().map((college) => (
-                            <button
-                              key={college}
-                              type="button"
-                              onClick={() => {
-                                setModalForm(prev => ({ ...prev, college }));
-                                setShowCollegeSuggestions(false);
-                              }}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-accent hover:text-accent-foreground transition-colors border-b last:border-b-0"
-                            >
-                              {college}
-                            </button>
-                          ))}
-                        </div>
-                      )}
+                    </div>
+                    
+                    <div>
+                      <label className="text-sm font-medium text-foreground mb-2 block">
+                        Department
+                      </label>
+                      <Input
+                        value={modalForm.department}
+                        onChange={(e) => setModalForm(prev => ({ ...prev, department: e.target.value }))}
+                        placeholder="Enter department"
+                      />
+                    </div>
+                    
+                    <div className="flex gap-3 pt-4">
+                      <Button 
+                        onClick={handleModalSubmit}
+                        className="flex-1"
+                        disabled={!modalForm.college || !modalForm.semester || !modalForm.courseName || !modalForm.department}
+                      >
+                        Submit Request
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setIsModalOpen(false)}
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
                     </div>
                   </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Semester
-                    </label>
-                    <Select 
-                      value={modalForm.semester} 
-                      onValueChange={(value) => setModalForm(prev => ({ ...prev, semester: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select semester" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="1">Semester 1</SelectItem>
-                        <SelectItem value="2">Semester 2</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Course Name
-                    </label>
-                    <Input
-                      value={modalForm.courseName}
-                      onChange={(e) => setModalForm(prev => ({ ...prev, courseName: e.target.value }))}
-                      placeholder="Enter course name"
-                    />
-                  </div>
-                  
-                  <div>
-                    <label className="text-sm font-medium text-foreground mb-2 block">
-                      Department
-                    </label>
-                    <Input
-                      value={modalForm.department}
-                      onChange={(e) => setModalForm(prev => ({ ...prev, department: e.target.value }))}
-                      placeholder="Enter department"
-                    />
-                  </div>
-                  
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      onClick={handleModalSubmit}
-                      className="flex-1"
-                      disabled={!modalForm.college || !modalForm.semester || !modalForm.courseName || !modalForm.department}
-                    >
-                      Submit Request
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={() => setIsModalOpen(false)}
-                      className="flex-1"
-                    >
-                      Cancel
-                    </Button>
-                  </div>
-                </div>
-              </DialogContent>
-            </Dialog>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
-        </div>
 
-        {/* Controls */}
-        <Card className="p-4 lg:p-6 mb-6 shadow-card">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Filter colleges..."
-                  value={collegeFilter}
-                  onChange={(e) => setCollegeFilter(e.target.value)}
-                  className="pl-10"
-                />
+          {/* Controls */}
+          <Card className="p-4 lg:p-6 mb-6 shadow-card">
+            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
+              <div className="flex-1">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Filter colleges..."
+                    value={collegeFilter}
+                    onChange={(e) => setCollegeFilter(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex flex-col sm:flex-row gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => handleSort('name')}
+                  className={`${sortBy === 'name' ? 'bg-accent' : ''} text-sm`}
+                  size="sm"
+                >
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">College Name</span>
+                  <span className="sm:hidden">Name</span>
+                  {sortBy === 'name' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
+                </Button>
+                
+                <Button
+                  variant="outline"
+                  onClick={() => handleSort('requests')}
+                  className={`${sortBy === 'requests' ? 'bg-accent' : ''} text-sm`}
+                  size="sm"
+                >
+                  <ArrowUpDown className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Total Requests</span>
+                  <span className="sm:hidden">Requests</span>
+                  {sortBy === 'requests' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
+                </Button>
               </div>
             </div>
-            
-            <div className="flex flex-col sm:flex-row gap-2">
-              <Button
-                variant="outline"
-                onClick={() => handleSort('name')}
-                className={`${sortBy === 'name' ? 'bg-accent' : ''} text-sm`}
-                size="sm"
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">College Name</span>
-                <span className="sm:hidden">Name</span>
-                {sortBy === 'name' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={() => handleSort('requests')}
-                className={`${sortBy === 'requests' ? 'bg-accent' : ''} text-sm`}
-                size="sm"
-              >
-                <ArrowUpDown className="h-4 w-4 mr-2" />
-                <span className="hidden sm:inline">Total Requests</span>
-                <span className="sm:hidden">Requests</span>
-                {sortBy === 'requests' && (sortOrder === 'asc' ? ' ↑' : ' ↓')}
-              </Button>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto p-4 lg:p-6">
 
         {/* College List */}
         <div className="space-y-4">
