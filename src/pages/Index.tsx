@@ -14,7 +14,8 @@ import {
   UserPlus,
   Mail,
   Lock,
-  User
+  User,
+  Check
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -34,6 +35,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { useToast } from '@/hooks/use-toast';
 
 // Course interface
@@ -102,6 +116,9 @@ const CourseCatalog = () => {
     courseName: '',
     department: ''
   });
+
+  // College autocomplete state
+  const [collegePopoverOpen, setCollegePopoverOpen] = useState(false);
 
   const [authForm, setAuthForm] = useState({
     name: '',
@@ -407,19 +424,54 @@ const CourseCatalog = () => {
                     <label className="text-sm font-medium text-foreground mb-2 block">
                       College Name
                     </label>
-                    <Select 
-                      value={modalForm.college} 
-                      onValueChange={(value) => setModalForm(prev => ({ ...prev, college: value }))}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a college" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from(new Set(courses.map(c => c.college))).map(college => (
-                          <SelectItem key={college} value={college}>{college}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Popover open={collegePopoverOpen} onOpenChange={setCollegePopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={collegePopoverOpen}
+                          className="w-full justify-between"
+                        >
+                          {modalForm.college || "Type or select a college..."}
+                          <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-full p-0" align="start">
+                        <Command>
+                          <CommandInput 
+                            placeholder="Search colleges..." 
+                            value={modalForm.college}
+                            onValueChange={(value) => setModalForm(prev => ({ ...prev, college: value }))}
+                          />
+                          <CommandList>
+                            <CommandEmpty>No college found.</CommandEmpty>
+                            <CommandGroup>
+                              {Array.from(new Set(courses.map(c => c.college)))
+                                .filter(college => 
+                                  college.toLowerCase().includes(modalForm.college.toLowerCase())
+                                )
+                                .map((college) => (
+                                <CommandItem
+                                  key={college}
+                                  value={college}
+                                  onSelect={(currentValue) => {
+                                    setModalForm(prev => ({ ...prev, college: currentValue }));
+                                    setCollegePopoverOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={`mr-2 h-4 w-4 ${
+                                      modalForm.college === college ? "opacity-100" : "opacity-0"
+                                    }`}
+                                  />
+                                  {college}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                   
                   <div>
